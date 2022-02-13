@@ -35,3 +35,9 @@ If you run this on a Raspberry Pi with a POE+ Hat, you may have noticed the anno
 2. Go through the settings in this file and change accordingly. 
 3. Make a copy of the example.inventory.ini to inventory.ini and change HOSTNAME, HOSTIP and SSHUSER
 4. Run `ansible-playbook main.yml -K` the first time you run this and fill in the password when asked. Later on you do not need the -K option anymore.
+
+## Currently tested on:
+
+- Raspberry Pi with 64 bit Raspberry Pi OS.
+
+Will add RHEL based OS's later on. 
