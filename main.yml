@@ -1,0 +1,190 @@
+---
+- hosts: all
+  become: yes
+
+  pre_tasks:
+
+  - name: Load config.yml file.
+    ansible.builtin.include_vars: config.yml
+
+  - name: Update Apt cache if older then an hour.
+    apt:
+      update_cache: yes
+      cache_valid_time: 3600
+    when: ansible_facts.os_family == "Debian"
+
+  handlers:
+  - name: restart sshd
+    service:
+      name: sshd
+      state: restarted
+
+  - name: restart firewalld
+    service:
+      name: firewalld
+      state: restarted
+
+  tasks:
+  - name: Add my key to Authorized_Keys file.
+    ansible.posix.authorized_key:
+      user: daveops
+      state: present
+      key: https://github.com/evadnl.keys
+    when: hardening_enabled
+
+  - name: Disable root login over ssh.
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      regexp: "^PermitRootLogin"
+      line: "PermitRootLogin no"
+      state: present
+    notify: restart sshd
+    when: hardening_enabled
+
+  - name: Disable Password login over ssh.
+    lineinfile:
+      dest: /etc/ssh/sshd_config
+      regexp: "^PasswordAuthentication"
+      line: "PasswordAuthentication no"
+      state: present
+    notify: restart sshd
+    when: hardening_enabled
+
+  - name: Set POE+ hat settings for overly agressive fan speeds.
+    blockinfile:
+      dest: /boot/config.txt
+      block: |
+        # PoE Hat Fan Speeds
+        dtparam=poe_fan_temp0=50000
+        dtparam=poe_fan_temp1=60000
+        dtparam=poe_fan_temp2=70000
+        dtparam=poe_fan_temp3=80000
+    when: poe_hat
+
+  - name: Install fail2ban.
+    package:
+      name: fail2ban
+      state: present
+    when: hardening_enabled
+
+  - name: Start fail2ban.
+    service:
+      name: fail2ban
+      state: started
+      enabled: yes
+    when: hardening_enabled
+
+  - name: Install Firewalld.
+    package:
+      name: firewalld
+      state: present
+    when: hardening_enabled
+
+  - name: Allow port 22/tcp through firewall.
+    ansible.posix.firewalld:
+      port: 22/tcp
+      state: enabled
+      permanent: yes
+    notify: restart firewalld
+    when: hardening_enabled
+
+  - name: Make sure Firewalld serice is started.
+    service:
+      name: firewalld
+      state: started
+      enabled: yes
+    when: hardening_enabled
+
+  - name: Check wether Docker is already installed.
+    ansible.builtin.command: which docker
+    failed_when: false
+    changed_when: false
+    check_mode: false
+    register: docker_already_installed
+
+  - name: Download the Docker install Convenience script.
+    become: false
+    ansible.builtin.get_url:
+      url: https://get.docker.com/
+      dest: ~/get-docker.sh
+      mode: 0755
+    when: docker_already_installed.rc == 1
+
+  - name: Run the Docker install Convenience script.
+    ansible.builtin.command: /home/{{ ansible_user }}/get-docker.sh
+    when: docker_already_installed.rc == 1
+
+  - name: Make sure Docker is started.
+    service:
+      name: docker
+      state: started
+      enabled: yes
+
+  - name: Add user to Docker Group.
+    ansible.builtin.user:
+      name: "{{ ansible_user }}"
+      groups: docker
+      append: yes
+
+  - name: Install Docker dependencies (Debian).
+    ansible.builtin.package:
+      name:
+        - git
+        - rsync
+        - python3-pip
+        - python3-dev
+      state: present
+    when: ansible_facts.os_family == "Debian"
+
+  - name: install docker-compose via pip3.
+    ansible.builtin.pip:
+      executable: pip3
+      name: docker-compose
+      state: present
+
+  - name: Create pihole folder.
+    become: false
+    ansible.builtin.file:
+      path: ~/pihole/
+      owner: "{{ ansible_user }}"
+      group: "{{ ansible_user }}"
+      mode: 0755
+      state: directory
+    when: pihole_install
+
+  - name: Copy docker-compose-pi-hole.yml to pihole folder.
+    become: false
+    ansible.builtin.template:
+      src: templates/docker-compose-pihole.yml.j2
+      dest: "~/pihole/docker-compose.yml"
+      mode: '0640'
+    when: pihole_install
+
+  - name: Run docker-compose up for Pihole.
+    become: false
+    ansible.builtin.docker_compose:
+      project_src: "~/pihole/"
+      build: false
+    when: pihole_install
+
+  - name: Allow ports 53/tcp, 53/udp, 67/tcp and 80/tcp through firewall.
+    ansible.posix.firewalld:
+      port: "{{ item }}"
+      state: enabled
+      permanent: yes
+    loop:
+      - "53/tcp"
+      - "53/udp"
+      - "67/tcp"
+      - "80/tcp"
+    when:
+      - pihole_install
+      - hardening_enabled
+
+    notify: restart firewalld
+
+  # - name: Debug docker_already_installed
+  #   ansible.builtin.debug:
+  #     var: docker_already_installed.rc
+  #     verbosity: 0
+

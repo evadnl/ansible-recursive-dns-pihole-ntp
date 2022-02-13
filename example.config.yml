@@ -1,0 +1,21 @@
+---
+# Configuration file
+
+# Enable security hardening
+# This will install a local firewall, push ssh keys and will remove the ability to login with a password.
+# WARNING: THIS CAN POTENTIALLY LOCK YOU OUT OF YOUR SYSTEM(S).
+hardening_enabled: true
+ssh_publickey_location: "https://github.com/evadnl.keys" # this can also be a local location (e.g. ~/.ssh/id_rsa.pub)
+
+
+# Pihole settings
+pihole_install: true
+pihole_dns1: 1.1.1.1 # Primary DNS Server.
+pihole_dns2: 1.0.0.1 # Secondary DNS Server.
+pihole_timezone: Europe/Amsterdam
+pihole_password: "change-password-here" # The password to use in the web-interface.
+
+# if you run this on a RPi with POE+ Hat, use this if you wish.
+# Many experience the fan rpm-ramp up as an annoying noise, this
+# will bring it down to acceptable levels.
+poe_hat: true
