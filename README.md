@@ -4,6 +4,7 @@ An Ansible Playbook that installs recursive DNS, Pihole and NTP.
 # To-do:
 - Install recursive DNS (Unbound)
 - Install NTP
+- Tidy things up in the playbook :))
 
 # What does it do?
 It currently installs a few things based on the settings in example.config.yml:
