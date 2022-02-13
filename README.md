@@ -14,8 +14,9 @@ It currently installs a few things based on the settings in example.config.yml:
 Setting the above to true will do the following:
 
 1. Harden your SSH setup by removing the ability to login to ssh with passwords;
-2. Copy over your public keys based on the URL or location you supply;
-3. Install firewalld and add the nessacary ports to operate.
+2. Install fail2ban;
+3. Copy over your public keys based on the URL or location you supply;
+4. Install firewalld and add the nessacary ports to operate;
 
 **IMPORTANT NOTE**: Failing in setting this up properly may result in your system becoming inaccassible. It's safer to set this to false if you do not know what this means!
 
